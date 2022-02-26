@@ -1,0 +1,142 @@
+---
+title: "INN Data Science SIG - Start-up questionnaire"
+author: "Daniel Hammarström"
+date: "2022-02-24"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+The results are in; we are starting a Data Science Special Interest Group! 
+
+Twenty-four inn-employees from all but one faculty have shown interest in the group so far (see figure below). Answers in the questionnaire suggest that we should arrange a wide range of activities to cover interests in the group. For example, most of us are interested in data visualization and statistical programming, but I'm also looking forward to learning about general-purpose programming and collaborative coding. Most of the respondents wish to meet or have a scheduled activity once a month. This means that the program committee should get to work. It will be great!
+
+The next step will be a gathering of the program committee. I will invite those of you who signed up for more work to a zoom meeting where we decide on this semester's activities. Maybe we will have the first planned activity sometime in April?
+
+Best regards
+Daniel
+
+
+
+```{r}
+library(readxl); library(tidyverse); library(ggtext); library(cowplot)
+
+dat <- read_excel("data/start-up-qs-20220226.xlsx")
+
+
+## Faculties
+
+
+faculties <- dat %>%
+  dplyr::select(NR, faculty = `Faculty affiliation:`) %>%
+  group_by(faculty) %>%
+  summarise(n = n()) %>%
+  
+  mutate(faculty = factor(faculty, 
+                          levels = c("Faculty of Applied Ecology, Agricultural Sciences and Biotechnology (ALB)",
+                                     "Faculty of Education (LUP)",
+                                     "Faculty of Social and Health Sciences (HSV)",
+                                     "Norwegian Film School",
+                                     "The Inland School of Business and Social Sciences (HHS)"), 
+                          labels = c("Faculty of Applied Ecology,<br>Agricultural Sciences and<br>Biotechnology (ALB)",
+                                     "Faculty of<br>Education (LUP)",
+                                     "Faculty of Social<br>and Health Sciences (HSV)",
+                                     "Norwegian Film School",
+                                     "The Inland School of Business<br>and Social Sciences (HHS)"))) %>%
+  
+  ggplot(aes(faculty, n, fill = faculty)) + 
+  geom_bar(stat = "identity") +
+   scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
+  theme(legend.position = "none", 
+        axis.text.x = element_markdown(hjust = 0.5),
+        axis.title.x = element_blank()) +
+  labs(subtitle = "What faculties do we represent?")
+
+
+## Main interests
+
+# Collapse a vector of "other" interests
+other <- dat %>%
+  select(other) %>%
+  filter(!is.na(other)) %>%
+  pull(other) %>%
+  paste(., collapse = ", ")
+
+
+
+interests <- dat %>%
+  dplyr::select(NR, interest1 = `My main interests are..._1`,
+                interest2 = `My main interests are..._2`,
+                interest3 = `My main interests are..._3`,
+                interest4 = `My main interests are..._4`,
+                interest5 = `My main interests are..._5`,
+                interest6 = `My main interests are..._6`,
+                interest7 = `My main interests are..._7`,
+                interest8 = `My main interests are..._8`,
+                interest9 = `My main interests are..._9`,
+                interest10 = `My main interests are..._10`,
+                interest11 = `My main interests are..._11`) %>%
+  pivot_longer(names_to = "names", values_to = "interests", cols = interest1:interest11) %>%
+
+  group_by(interests) %>%
+  summarise(n = n()) %>%
+  filter(!is.na(interests)) %>%
+  mutate(interests = fct_reorder(interests, n)) %>%
+  ggplot(aes(n, interests, fill = n)) + geom_bar(stat = "identity") +
+  
+  
+  annotate("text", x = 5.5, y = 1, label = other, 
+           size = 2.5, hjust = 0) +
+  
+  
+  theme(legend.position = "none", 
+        axis.title = element_blank()) +
+  labs(subtitle = "What are our main interests?")
+
+#### How often do we want to meet / have activities
+
+meet <- dat %>%
+  dplyr::select(NR, 
+                activities = "How often do you think INN-DSIG should plan activities?") %>%
+  group_by(activities) %>%
+  summarise(n = n()) %>%
+    mutate(activities = factor(activities, 
+                               levels = c("Once a month", 
+                                          "Two to three times per semester", 
+                                          "Once every two weeks"),
+                               labels = c("Once a month", 
+                                          "Two to three<br>times per semester", 
+                                          "Once every two weeks")),
+           activities = fct_reorder(activities, n)) %>%
+   ggplot(aes(n, activities, fill = n, label = n)) + 
+  geom_bar(stat = "identity") +
+  geom_text(position = position_nudge(x = 0.5), size = 3) +
+
+  
+  theme(legend.position = "none", 
+        axis.title = element_blank(), 
+        axis.text.x = element_blank(),
+        axis.text.y = element_markdown(),
+        axis.ticks = element_blank()) +
+  labs(subtitle = "How often should we plan activities?")
+  
+
+
+
+
+figure <- plot_grid(faculties,
+                    interests,
+                    meet,
+                    rel_heights = c(2, 2, 1),
+                    ncol = 1)
+
+
+figure
+
+
+```
+
